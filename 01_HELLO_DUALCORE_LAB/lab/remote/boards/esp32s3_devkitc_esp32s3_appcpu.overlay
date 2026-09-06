@@ -1,0 +1,46 @@
+/*
+ * Overlay for 01_HELLO_DUALCORE_LAB - core1 (appcpu) image
+ *
+ * Same "gpio-leds" / `led0` alias pattern as the procpu overlay, on a
+ * different GPIO so both LEDs are visually distinguishable on the
+ * breadboard.
+ *
+ * GPIO42 is a plain, unused GPIO on this board (not a strapping pin
+ * 0/3/45/46, not USB-JTAG 19/20, not in the SPI flash range 26-32 or the
+ * octal PSRAM/flash range 33-37) - chosen freely for this lab and
+ * intended as this IPC track's convention for the appcpu heartbeat LED
+ * in later labs too. GPIO42 is >= GPIO32, so it lives on the &gpio1
+ * controller (pins 32-53) at local index 42-32=10.
+ *
+ * GPIO39-42 double as the classic 5-pin external JTAG (MTCK/MTDO/MTDI/
+ * MTMS) on ESP32-S3, but DevKitC-1 boards use the separate USB-JTAG
+ * bridge on GPIO19/20 instead, so GPIO42 is free for general GPIO use
+ * here.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		led_appcpu: led_0 {
+			gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+			label = "APPCPU heartbeat LED";
+		};
+	};
+
+	aliases {
+		led0 = &led_appcpu;
+	};
+};
+
+/*
+ * Required even though this lab has no IPC of its own: on this board,
+ * appcpu is never released from reset unless &ipm0 is enabled on BOTH
+ * images (confirmed on real hardware - see the troubleshooting doc for
+ * how this was found). Not used to send/receive anything here - Lab 02
+ * is where this project starts actually using inter-core communication.
+ */
+&ipm0 {
+	status = "okay";
+};

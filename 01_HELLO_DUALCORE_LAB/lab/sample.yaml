@@ -1,0 +1,17 @@
+sample:
+  name: 01 Hello Dual-Core (AMP procpu + appcpu, no IPC yet)
+  description: >
+    Minimal ESP32-S3 AMP scaffold - builds and flashes two independent
+    Zephyr images (procpu + appcpu) with west sysbuild. Each core blinks
+    its own LED at a different rate to prove both are running
+    independently; no inter-processor communication yet (see Lab 02).
+common:
+  sysbuild: true
+tests:
+  sample.boards.espressif.esp32s3_devkitc.hello_dualcore:
+    build_only: true
+    platform_allow: esp32s3_devkitc/esp32s3/procpu
+    tags:
+      - ipc
+      - amp
+      - esp32s3

@@ -1,0 +1,41 @@
+/*
+ * Overlay for 01_HELLO_DUALCORE_LAB - core0 (procpu) image
+ *
+ * This lab uses no communication peripheral at all (no I2C/SPI) - the only
+ * job of this core is to prove it is running, independently of core1.
+ * A plain GPIO-driven LED (Zephyr's standard "gpio-leds" pattern, exposed
+ * as the `led0` alias) is used for that, plus the console UART for
+ * printk/LOG output.
+ *
+ * GPIO2 is a plain, unused GPIO on this board (not a strapping pin
+ * 0/3/45/46, not a USB-JTAG pin 19/20) - chosen freely for this lab and
+ * intended as this IPC track's convention for the procpu heartbeat LED
+ * in later labs too.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		led_procpu: led_0 {
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+			label = "PROCPU heartbeat LED";
+		};
+	};
+
+	aliases {
+		led0 = &led_procpu;
+	};
+};
+
+/*
+ * Required even though this lab has no IPC of its own: on this board,
+ * appcpu is never released from reset unless &ipm0 is enabled on BOTH
+ * images (confirmed on real hardware - see the troubleshooting doc for
+ * how this was found). Not used to send/receive anything here - Lab 02
+ * is where this project starts actually using inter-core communication.
+ */
+&ipm0 {
+	status = "okay";
+};

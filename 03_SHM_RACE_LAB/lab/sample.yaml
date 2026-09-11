@@ -1,0 +1,26 @@
+sample:
+  name: 03_shm_race_lab
+  description: >
+    Lab 03 - Shared memory (ipmmem0 reuse) + MBOX doorbell notification.
+    procpu writes an incrementing sequence number into the reused ipmmem0
+    block and rings appcpu's MBOX doorbell every 200ms. appcpu drains that
+    backlog more slowly (350ms) using an atomic pending-counter, so no
+    doorbell is ever lost as a *count* - but the raw shared-memory value it
+    reads back each time is only ever whatever is currently there, so
+    intermediate values written in between are not guaranteed to survive.
+    Confirmed on real hardware that reusing ipmmem0 for a NULL-payload
+    mbox0 doorbell does not conflict with mbox0's own (unused when the
+    payload is NULL) shared-memory scratch usage.
+
+common:
+  tags:
+    - dual-core
+    - ipc
+    - mbox
+    - shared-memory
+  platform_allow:
+    - esp32s3_devkitc/esp32s3/procpu
+
+tests:
+  sample.dual_core.shm_race:
+    build_only: true

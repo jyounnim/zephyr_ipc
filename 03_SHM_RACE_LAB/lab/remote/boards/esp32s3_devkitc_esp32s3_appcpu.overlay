@@ -1,0 +1,34 @@
+/*
+ * Overlay for 03_SHM_RACE_LAB - core1 (appcpu) image
+ *
+ * Reuses this series' GPIO42 "led0" heartbeat LED convention (see Lab 01).
+ * See the procpu overlay in this same lab for why no new devicetree node
+ * is needed for shared memory (ipmmem0 reuse) and why only &mbox0 (not
+ * &ipm0) is enabled here.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+        led_appcpu: led_0 {
+            gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+            label = "APPCPU heartbeat LED";
+        };
+    };
+
+    aliases {
+        led0 = &led_appcpu;
+    };
+
+    mbox_consumer: mbox-consumer {
+        compatible = "vnd,mbox-consumer";
+        mboxes = <&mbox0 0>, <&mbox0 0>;
+        mbox-names = "tx", "rx";
+    };
+};
+
+&mbox0 {
+    status = "okay";
+};

@@ -1,0 +1,50 @@
+/*
+ * Overlay for 03_SHM_RACE_LAB - core0 (procpu) image
+ *
+ * Reuses this series' GPIO2 "led0" heartbeat LED convention (see Lab 01).
+ *
+ * The "mbox-consumer" node is identical to 02_MBOX_DOORBELL_LAB's - see
+ * that lab's doc for why this "vnd,mbox-consumer" binding is used and why
+ * tx/rx both point at &mbox0 channel 0.
+ *
+ * NOTE: this lab does NOT add any new devicetree node for shared memory.
+ * The 1KB block this lab writes its own struct into (ipmmem0, physical
+ * address 0x3fce5000) is *already* declared in the SoC-level devicetree
+ * as the private scratch buffer &ipm0/&mbox0 reserve for their own
+ * message-copy mechanism (see the "shared-memory"/"shared-memory-size"
+ * properties on those nodes). Because every mbox_send_dt() call in this
+ * lab (like Lab 02) always passes a NULL payload, the mbox0 driver's own
+ * memcpy into that buffer is never triggered - see src/shared_mem.h and
+ * the doc for the full reasoning and the exact driver source checked to
+ * confirm this.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+        led_procpu: led_0 {
+            gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+            label = "PROCPU heartbeat LED";
+        };
+    };
+
+    aliases {
+        led0 = &led_procpu;
+    };
+
+    mbox_consumer: mbox-consumer {
+        compatible = "vnd,mbox-consumer";
+        mboxes = <&mbox0 0>, <&mbox0 0>;
+        mbox-names = "tx", "rx";
+    };
+};
+
+/*
+ * &ipm0 stays disabled here on purpose - only &mbox0 is enabled, per this
+ * series' policy (see 02_MBOX_DOORBELL_LAB's doc for the full reasoning).
+ */
+&mbox0 {
+    status = "okay";
+};

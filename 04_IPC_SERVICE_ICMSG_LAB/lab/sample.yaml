@@ -1,0 +1,23 @@
+sample:
+  name: 04_ipc_service_icmsg_lab
+  description: >
+    Lab 04 - Reimplements Lab 03's "keep an incrementing sequence number in
+    sync between procpu and appcpu" experiment using Zephyr's IPC Service
+    framework (icmsg backend) instead of raw MBOX + a hand-rolled shared
+    struct. procpu sends seq numbers every 200ms and appcpu echoes each one
+    straight back; unlike Lab 03's single shared-memory slot, icmsg's queued
+    ring buffer means every single value is expected to arrive back in order
+    with none skipped.
+
+common:
+  tags:
+    - dual-core
+    - ipc
+    - ipc-service
+    - icmsg
+  platform_allow:
+    - esp32s3_devkitc/esp32s3/procpu
+
+tests:
+  sample.dual_core.ipc_service_icmsg:
+    build_only: true

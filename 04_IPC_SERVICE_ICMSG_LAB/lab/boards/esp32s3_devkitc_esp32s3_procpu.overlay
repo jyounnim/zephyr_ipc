@@ -1,0 +1,81 @@
+/*
+ * Overlay for 04_IPC_SERVICE_ICMSG_LAB - core0 (procpu) image
+ *
+ * Reuses this series' GPIO2 "led0" heartbeat LED convention (see Lab 01).
+ *
+ * Shared memory for the IPC Service icmsg backend:
+ *
+ * ESP32-S3's SoC devicetree (dts/xtensa/espressif/esp32s3/esp32s3_common.dtsi)
+ * already declares TWO adjacent blocks right before the &ipm0/&mbox0
+ * register block:
+ *
+ *   ipmmem0: memory@3fce5000 { compatible = "mmio-sram"; reg = <0x3fce5000 0x400>;  }; (1KB  - used by Lab 02/03)
+ *   shm0:    memory@3fce5400 { compatible = "mmio-sram"; reg = <0x3fce5400 0x4000>; }; (16KB - NOT used by any lab yet)
+ *
+ * "shm0" is a second, separate 16KB block, declared right next to ipmmem0
+ * using the exact same pattern - clearly intended by the SoC port as
+ * general-purpose dual-core shared memory (its name is literally "shared
+ * memory 0"). No existing Zephyr sample currently uses it, but it is
+ * declared the same way as ipmmem0, which we have already proven safe to
+ * use on real hardware across Labs 02/03. This lab splits shm0's 16KB into
+ * two 8KB halves (icmsg_p2a/icmsg_a2p below) for the icmsg backend's tx/rx
+ * ring buffers - see the doc for the full reasoning.
+ *
+ * dcache-alignment is set to 0 (no cache management needed): Labs 02/03
+ * already read and wrote this same address range directly via plain
+ * `volatile` pointers, with no cache flush/invalidate of any kind, and
+ * worked correctly on real hardware - meaning this SRAM range is not
+ * behind either core's data cache.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+        led_procpu: led_0 {
+            gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+            label = "PROCPU heartbeat LED";
+        };
+    };
+
+    aliases {
+        led0 = &led_procpu;
+    };
+
+    reserved-memory {
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        /* procpu writes here, appcpu reads (procpu -> appcpu) */
+        icmsg_p2a: memory@3fce5400 {
+            reg = <0x3fce5400 0x2000>;
+        };
+
+        /* appcpu writes here, procpu reads (appcpu -> procpu) */
+        icmsg_a2p: memory@3fce7400 {
+            reg = <0x3fce7400 0x2000>;
+        };
+    };
+
+    ipc0: ipc0 {
+        compatible = "zephyr,ipc-icmsg";
+        dcache-alignment = <0>;
+        tx-region = <&icmsg_p2a>;
+        rx-region = <&icmsg_a2p>;
+        mboxes = <&mbox0 0>, <&mbox0 0>;
+        mbox-names = "tx", "rx";
+        status = "okay";
+    };
+};
+
+/*
+ * &ipm0 stays disabled here on purpose - only &mbox0 is enabled, per this
+ * series' policy (see 02_MBOX_DOORBELL_LAB's doc). The icmsg backend uses
+ * &mbox0 internally purely as a "check the ring buffer" kick - actual
+ * message bytes travel through icmsg_p2a/icmsg_a2p above, never through
+ * &mbox0's own private shared-memory scratch buffer (ipmmem0).
+ */
+&mbox0 {
+    status = "okay";
+};

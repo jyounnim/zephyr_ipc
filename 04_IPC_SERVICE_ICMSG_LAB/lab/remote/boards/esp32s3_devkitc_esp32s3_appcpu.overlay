@@ -1,0 +1,54 @@
+/*
+ * Overlay for 04_IPC_SERVICE_ICMSG_LAB - core1 (appcpu) image
+ *
+ * Reuses this series' GPIO42 "led0" heartbeat LED convention (see Lab 01).
+ * See the procpu overlay in this same lab for the full reasoning behind
+ * reusing shm0 for icmsg_p2a/icmsg_a2p and dcache-alignment=0.
+ *
+ * NOTE the tx-region/rx-region assignment below is the MIRROR of the
+ * procpu overlay's (tx and rx swapped) - this core writes into icmsg_a2p
+ * and reads from icmsg_p2a, exactly the opposite of procpu.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+        led_appcpu: led_0 {
+            gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+            label = "APPCPU heartbeat LED";
+        };
+    };
+
+    aliases {
+        led0 = &led_appcpu;
+    };
+
+    reserved-memory {
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        icmsg_p2a: memory@3fce5400 {
+            reg = <0x3fce5400 0x2000>;
+        };
+
+        icmsg_a2p: memory@3fce7400 {
+            reg = <0x3fce7400 0x2000>;
+        };
+    };
+
+    ipc0: ipc0 {
+        compatible = "zephyr,ipc-icmsg";
+        dcache-alignment = <0>;
+        tx-region = <&icmsg_a2p>;
+        rx-region = <&icmsg_p2a>;
+        mboxes = <&mbox0 0>, <&mbox0 0>;
+        mbox-names = "tx", "rx";
+        status = "okay";
+    };
+};
+
+&mbox0 {
+    status = "okay";
+};

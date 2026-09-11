@@ -1,0 +1,56 @@
+/*
+ * Overlay for 02_MBOX_DOORBELL_LAB - core0 (procpu) image
+ *
+ * Reuses this series' GPIO2 "led0" heartbeat LED convention from Lab 01
+ * (see 01_HELLO_DUALCORE_LAB doc). The trigger button is NOT wired
+ * externally - it reuses the DevKitC-1's own onboard BOOT button, which
+ * mainline Zephyr's esp32s3_devkitc board files already expose as the
+ * "sw0" alias (GPIO0, active-low, internal pull-up already configured -
+ * see zephyr/boards/espressif/esp32s3_devkitc/esp32s3_devkitc_procpu.dts).
+ * No extra wiring is needed for the button.
+ *
+ * The "mbox-consumer" node below follows Zephyr's own convention for
+ * MBOX consumers (see zephyr/samples/drivers/mbox's app overlay): a node
+ * with `mboxes`/`mbox-names` phandle-array properties, using the
+ * `compatible = "vnd,mbox-consumer"` binding that already ships in
+ * mainline Zephyr (dts/bindings/test/vnd,mbox-consumer.yaml) purely so
+ * MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), ...) has something to read -
+ * it is not tied to any real driver.
+ *
+ * ESP32's soft MBOX hardware only has one channel per direction (see
+ * doc), so "tx" and "rx" both point at &mbox0 channel 0 - direction is
+ * determined by which core (procpu/appcpu) is running this image, not by
+ * the channel number.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		led_procpu: led_0 {
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+			label = "PROCPU heartbeat LED";
+		};
+	};
+
+	aliases {
+		led0 = &led_procpu;
+	};
+
+	mbox_consumer: mbox-consumer {
+		compatible = "vnd,mbox-consumer";
+		mboxes = <&mbox0 0>, <&mbox0 0>;
+		mbox-names = "tx", "rx";
+	};
+};
+
+/*
+ * &ipm0 stays disabled here on purpose (see prj.conf) - only &mbox0 is
+ * enabled. Confirmed on real hardware that &mbox0 alone is enough to
+ * release appcpu from reset; see the doc for why &ipm0 and &mbox0 are
+ * not both enabled together.
+ */
+&mbox0 {
+	status = "okay";
+};

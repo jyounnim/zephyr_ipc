@@ -1,0 +1,43 @@
+/*
+ * Overlay for 02_MBOX_DOORBELL_LAB - core1 (appcpu) image
+ *
+ * Reuses this series' GPIO42 "led0" heartbeat LED convention from Lab 01
+ * (see 01_HELLO_DUALCORE_LAB doc for why GPIO42 / &gpio1 local index 10).
+ *
+ * Same "mbox-consumer" pattern as the procpu overlay - see that file's
+ * comment for details. tx/rx both point at the same &mbox0 channel 0;
+ * which direction actually moves data is determined by which core is
+ * running this image.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		led_appcpu: led_0 {
+			gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+			label = "APPCPU heartbeat LED";
+		};
+	};
+
+	aliases {
+		led0 = &led_appcpu;
+	};
+
+	mbox_consumer: mbox-consumer {
+		compatible = "vnd,mbox-consumer";
+		mboxes = <&mbox0 0>, <&mbox0 0>;
+		mbox-names = "tx", "rx";
+	};
+};
+
+/*
+ * &ipm0 stays disabled here on purpose (see prj.conf) - only &mbox0 is
+ * enabled. Confirmed on real hardware that &mbox0 alone is enough to
+ * release appcpu from reset; see the doc for why &ipm0 and &mbox0 are
+ * not both enabled together.
+ */
+&mbox0 {
+	status = "okay";
+};

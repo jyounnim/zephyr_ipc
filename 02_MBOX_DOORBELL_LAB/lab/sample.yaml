@@ -1,0 +1,21 @@
+sample:
+  name: 02 MBOX Doorbell (signal-only, bidirectional)
+  description: >
+    First real inter-processor communication lab in this series. Uses
+    Zephyr's MBOX API (espressif,mbox-esp32 / &mbox0) as a pure signal-only
+    "doorbell" - no data payload - in both directions: the onboard BOOT
+    button on procpu rings appcpu's doorbell (visible as an LED reaction),
+    and appcpu rings procpu's doorbell on a timer (visible as a log line).
+    &ipm0 is intentionally left disabled - confirmed on real hardware that
+    &mbox0 alone releases appcpu from reset (see the doc for details).
+common:
+  sysbuild: true
+tests:
+  sample.boards.espressif.esp32s3_devkitc.mbox_doorbell:
+    build_only: true
+    platform_allow: esp32s3_devkitc/esp32s3/procpu
+    tags:
+      - ipc
+      - amp
+      - esp32s3
+      - mbox
